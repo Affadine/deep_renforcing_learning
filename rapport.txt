@@ -1,0 +1,21 @@
+Installation :
+
+ouvir l'environnement  Anaconda prompt
+
+aller sur https://towardsdatascience.com/how-to-install-openai-gym-in-a-windows-environment-338969e24d30
+suivre les instructions d'installation
+
+
+conda install -c conda-forge ffmpeg
+
+Explication du prof: 
+Pour windows, vous devrez surement installer vizdoom avec ce lien github https://github.com/mwydmuch/ViZDoom
+En fait le lien qu'on a donné c'est juste l'inferface gym pour vizdoom, et il installe le vizdoom de ce repo
+Mais dans mwydmuch , ils expliquent comment installer avec windows
+
+
+Execution : 
+
+ouvir l'environnement  Anaconda prompt
+
+Executer random_agent.py depuis deeplearning\gym\examples\agents
