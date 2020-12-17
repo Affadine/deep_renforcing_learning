@@ -6,6 +6,10 @@ aller sur https://towardsdatascience.com/how-to-install-openai-gym-in-a-windows-
 suivre les instructions d'installation
 
 
+https://www.tensorflow.org/agents/tutorials/1_dqn_tutorial
+
+
+
 conda install -c conda-forge ffmpeg
 
 Explication du prof: 
@@ -19,3 +23,13 @@ Execution :
 ouvir l'environnement  Anaconda prompt
 
 Executer random_agent.py depuis deeplearning\gym\examples\agents
+
+Fin question 5 : c'est normal si le réseau de neurone n'est pas fonctionnel.
+Question 6
+Discrit -> tenser.   on specifie le nb de sortie que l'on a
+
+Question
+
+
+
+https://github.com/openai/gym/issues/2101
