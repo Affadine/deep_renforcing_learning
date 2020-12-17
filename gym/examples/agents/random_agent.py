@@ -38,31 +38,46 @@ if __name__ == '__main__':
     reward = 0
     done = False
     sumReward = 0
-    rewardFollowing = []
+    rewardFollowingTab = {}
 
     for i in range(episode_count):
         #print("i= " + str(i))
         ob = env.reset()
         rewardFollowing = []
+        sumReward = 0
         while True:
             action = agent.act(ob, reward, done)
             ob, reward, done, _ = env.step(action)
             sumReward+=reward
             rewardFollowing.append(sumReward)
-            #print("action = " + str(action))
-            if(sumReward % 100 == 0):
-                print("sumReward = " + str(sumReward))
+            if(reward!=1):
+                print("reward = " + str(reward))
+            #if(sumReward % 100 == 0):
+            #    print("sumReward = " + str(sumReward))
             if done:
+                rewardFollowingTab[i] = rewardFollowing
                 break
             # Note there's no env.render() here. But the environment still can open window and
             # render if asked by env.monitor: it calls env.render('rgb_array') to record video.
             # Video is not recorded every episode, see capped_cubic_video_schedule for details.
 
     # Close the env and write monitor result info to disk
-    print("before env.close ")
+    print("before env.close")
     env.close()
-    
+
     #plt.plot([1, 2, 3, 4])
-    plt.plot(rewardFollowing)
+    for key in rewardFollowingTab:
+        #print(rewardFollowingTab[key])
+        rewardFollowing = rewardFollowingTab[key]
+        xval=[]
+        yval=[]
+        index=1
+        for nextReward in rewardFollowing :
+            xval.append(index)
+            yval.append(nextReward)
+            index=index+1
+        print("Episode : " + str(key))
+        print(rewardFollowing)
+    plt.scatter(xval, yval)
     plt.ylabel('Learning')
     plt.show()
