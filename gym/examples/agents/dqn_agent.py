@@ -18,6 +18,7 @@ import PIL.Image
 #import pyvirtualdisplay
 
 import tensorflow as tf
+import random
 
 '''
 from tf_agents.agents.dqn import dqn_agent
@@ -40,7 +41,12 @@ class RandomAgent(object):
         self.action_space = action_space
 
     def act(self, observation, reward, done):
-        return self.action_space.sample()
+        if(len(memeryBuffer) > 0):
+            randomInteraction = random.choice(memeryBuffer)
+            print(randomInteraction, randomInteraction[1])
+            return randomInteraction[1]
+        return 0
+        #return self.action_space.sample()
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=None)
@@ -87,7 +93,7 @@ if __name__ == '__main__':
             #    print("sumReward = " + str(sumReward))
             #  interaction=(état,action,étatsuivant,récompense,finépisode)
             # actionobservation
-            interaction=(lastObservation,action,observation,reward,done)
+            interaction = (lastObservation,action,observation,reward,done)
             memeryBuffer.insert(0,interaction)
             #print("interaction = " + str(interaction) + " memory size = " + str(sys.getsizeof(memeryBuffer)))
             print(" memory size = " + str(sys.getsizeof(memeryBuffer)))
