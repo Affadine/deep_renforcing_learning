@@ -33,12 +33,48 @@ from tf_agents.replay_buffers import tf_uniform_replay_buffer
 from tf_agents.trajectories import trajectory
 from tf_agents.utils import common
 '''
+
+import tensorflow as tf
+
+from tensorflow import keras
+from tensorflow.keras import layers
+
+
 maxSize = 100 * 1000
 
 class DQNAgent(object):
     """The world's simplest agent!"""
     def __init__(self, action_space):
         self.action_space = action_space
+        self.state_size = 0
+        self.Q_size = len(self.action_space)
+        self.Q = {}
+        self.alpha = 0.1
+        self.gamma = 0.9
+        self.epsilon = 0.1
+        self.learning_rate =0.0001
+        self.optimizer = tf.optimizers.Adam(learning_rate=self.learning_rate)
+        self.batch_size
+        self.epochs
+        self.model = self.creer_model()
+
+    def creer_model(self):
+        model = keras.Sequential()
+        model.add(keras.Embedding(self.state_size, self.Q_size, input_length=1))
+        model.add(keras.Reshape((self.Q_size,)))
+        model.add(layers.Dense(64, activation='relu'))
+        model.add(layers.Dense(64, activation='relu'))
+        model.add(layers.Dense(self.Q_size, activation='linear'))
+        model.compile(loss='mse', optimizer=self._optimizer)
+        return model
+
+    def train_model(self):
+        #todo
+
+    def predict(self,state):
+        return self.model.predict(state)
+
+
         
     def get_batch(self, batch_size):
         if(len(memeryBuffer) > 0):
@@ -47,16 +83,9 @@ class DQNAgent(object):
         return None
               
 
-    def act(self, observation, reward, done):
-        #action possibles
-        #availableactions = env.unwrapped.get_action_meanings()
-        #print(availableactions)
-        if(len(memeryBuffer) > 0):
-            randomInteraction = random.choice(memeryBuffer)
-            print(randomInteraction, randomInteraction[1])
-            return randomInteraction[1]
-        return 0
-        #return self.action_space.sample()
+    def act(self, observation):
+        self.Q = self.predict(observation)
+        return np.argmax(self.Q)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=None)
@@ -95,6 +124,8 @@ if __name__ == '__main__':
             action = agent.act(observation, reward, done)
             lastObservation = observation
             observation, reward, done, info = env.step(action)
+            #Recuperer la taille de l'action
+            agent.state_size = len(observation)
             sumReward+=reward
             rewardFollowing.append(sumReward)
             if(reward!=1):
