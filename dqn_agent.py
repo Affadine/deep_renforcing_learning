@@ -54,22 +54,25 @@ class DQNAgent(object):
         self.epsilon = 0.1
         self.learning_rate =0.0001
         self.optimizer = tf.optimizers.Adam(learning_rate=self.learning_rate)
-        self.batch_size
-        self.epochs
+        self.batch_size = 32
+        self.epochs = 14
         self.model = self.creer_model()
 
     def creer_model(self):
         model = keras.Sequential()
-        model.add(keras.Embedding(self.state_size, self.Q_size, input_length=1))
-        model.add(keras.Reshape((self.Q_size,)))
+        model.add(layers.Embedding(self.state_size, self.Q_size, input_length=1))
+        model.add(layers.Reshape((self.Q_size,)))
         model.add(layers.Dense(64, activation='relu'))
         model.add(layers.Dense(64, activation='relu'))
         model.add(layers.Dense(self.Q_size, activation='linear'))
-        model.compile(loss='mse', optimizer=self._optimizer)
+        model.compile(loss='mse', optimizer=self.optimizer)
         return model
 
-    def train_model(self):
-        #todo
+    def train_model(self,data):
+        X, Y = data
+        history = self.model.fit(X, Y,
+                            epochs = self.epochs,
+                            batch_size = self.batch_size)
 
     def predict(self,state):
         return self.model.predict(state)
