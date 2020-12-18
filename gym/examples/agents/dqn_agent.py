@@ -35,12 +35,22 @@ from tf_agents.utils import common
 '''
 maxSize = 100 * 1000
 
-class RandomAgent(object):
+class DQNAgent(object):
     """The world's simplest agent!"""
     def __init__(self, action_space):
         self.action_space = action_space
+        
+    def get_batch(self, batch_size):
+          if(len(memeryBuffer) > 0):
+            randomInteraction = random.choice(memeryBuffer, None, None, batch_size)
+            return randomInteraction
+           return None
+              
 
     def act(self, observation, reward, done):
+        #action possibles
+        #availableactions = env.unwrapped.get_action_meanings()
+        #print(availableactions)
         if(len(memeryBuffer) > 0):
             randomInteraction = random.choice(memeryBuffer)
             print(randomInteraction, randomInteraction[1])
@@ -66,7 +76,7 @@ if __name__ == '__main__':
     outdir = '/tmp/random-agent-results'
     env = wrappers.Monitor(env, directory=outdir, force=True)
     env.seed(0)
-    agent = RandomAgent(env.action_space)
+    agent = DQNAgent(env.action_space)
 
     episode_count = 100
     reward = 0
