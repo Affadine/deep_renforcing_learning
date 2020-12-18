@@ -41,10 +41,10 @@ class DQNAgent(object):
         self.action_space = action_space
         
     def get_batch(self, batch_size):
-          if(len(memeryBuffer) > 0):
+        if(len(memeryBuffer) > 0):
             randomInteraction = random.choice(memeryBuffer, None, None, batch_size)
             return randomInteraction
-           return None
+        return None
               
 
     def act(self, observation, reward, done):
