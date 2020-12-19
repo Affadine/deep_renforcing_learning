@@ -3,22 +3,10 @@ import sys
 
 import gym
 from gym import wrappers, logger
-import matplotlib.pyplot as plt
 
 
-#from __future__ import absolute_import, division, print_function
-
-import base64
-#import imageio
-import IPython
-import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
-import PIL.Image
-#import pyvirtualdisplay
-
-import tensorflow as tf
-import random
 
 '''
 from tf_agents.agents.dqn import dqn_agent
@@ -40,21 +28,22 @@ from tensorflow import keras
 from tensorflow.keras import layers
 
 
-maxSize = 100 * 1000
 
 class DQNAgent(object):
     """The world's simplest agent!"""
-    def __init__(self, action_space):
-        self.action_space = action_space
-        self.state_size = 0
-        self.Q_size = len(self.action_space)
-        self.Q = {}
+    def __init__(self, env):
+        self.env = env
+        self.state_size = 4 #self.env.observation_space
+        self.Q_size = self.env.action_space.n
+        self.Q_valeur = {}
+        self.memoryBuffer = []
+        self.maxSize = 100 * 1000
         self.alpha = 0.1
         self.gamma = 0.9
         self.epsilon = 0.1
         self.learning_rate =0.0001
         self.optimizer = tf.optimizers.Adam(learning_rate=self.learning_rate)
-        self.batch_size = 32
+        self.batch_size = 1000
         self.epochs = 14
         self.model = self.creer_model()
 
@@ -68,27 +57,43 @@ class DQNAgent(object):
         model.compile(loss='mse', optimizer=self.optimizer)
         return model
 
-    def train_model(self,data):
+    '''def train_model(self,data):
         X, Y = data
         history = self.model.fit(X, Y,
                             epochs = self.epochs,
                             batch_size = self.batch_size)
+    '''
+    def retrain(self):
+        minibatch = self.get_batch(self.batch_size)
+
+        for state, action, reward, next_state, terminated in minibatch:
+
+            target = self.predict(state)
+
+            if terminated:
+                target[0][action] = reward
+            else:
+                t = self.predict(next_state)
+                target[0][action] = reward + self.gamma * np.amax(t)
+
+            self.model.fit(state, target, epochs=1, verbose=0)
 
     def predict(self,state):
         return self.model.predict(state)
 
 
         
-    def get_batch(self, batch_size):
-        if(len(memeryBuffer) > 0):
-            randomInteraction = random.choice(memeryBuffer, None, None, batch_size)
-            return randomInteraction
-        return None
+    def get_batch(self):
+        return np.random.sample(self.memoryBuffer, self.batch_size)
               
 
     def act(self, observation):
-        self.Q = self.predict(observation)
-        return np.argmax(self.Q)
+        if np.random.rand() <= self.epsilon:
+            return self.env.action_space.sample()
+
+        self.Q_valeur = self.predict(observation)
+        return np.argmax(self.Q_valeur)
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=None)
@@ -108,7 +113,7 @@ if __name__ == '__main__':
     outdir = '/tmp/random-agent-results'
     env = wrappers.Monitor(env, directory=outdir, force=True)
     env.seed(0)
-    agent = DQNAgent(env.action_space)
+    agent = DQNAgent(env)
 
     episode_count = 100
     reward = 0
@@ -116,35 +121,34 @@ if __name__ == '__main__':
     sumReward = 0
     lastObservation = []
     rewardFollowingTab = {}
-    memeryBuffer = []
+    memoryBuffer = []
 
     for i in range(episode_count):
-        #print("i= " + str(i))
         observation = env.reset()
         rewardFollowing = []
         sumReward = 0
         while True:
-            action = agent.act(observation, reward, done)
-            lastObservation = observation
-            observation, reward, done, info = env.step(action)
+            action = agent.act(observation)
+            next_observation, reward, done, info = env.step(action)
+
+            # actionobservation
+            interaction = (observation, action, next_observation, reward, done)
+            memoryBuffer.append(interaction)
+
+            observation = next_observation
+
             #Recuperer la taille de l'action
-            agent.state_size = len(observation)
             sumReward+=reward
             rewardFollowing.append(sumReward)
             if(reward!=1):
                 print("reward = " + str(reward))
-            #if(sumReward % 100 == 0):
-            #    print("sumReward = " + str(sumReward))
-            #  interaction=(état,action,étatsuivant,récompense,finépisode)
-            # actionobservation
-            interaction = (lastObservation,action,observation,reward,done)
-            memeryBuffer.insert(0,interaction)
-            #print("interaction = " + str(interaction) + " memory size = " + str(sys.getsizeof(memeryBuffer)))
-            print(" memory size = " + str(sys.getsizeof(memeryBuffer)))
-            while(sys.getsizeof(memeryBuffer) > maxSize):
+
+
+            print(" memory size = " + str(sys.getsizeof(memoryBuffer)))
+            '''while(sys.getsizeof(memoryBuffer) > maxSize):
                 print("remove last item")
-                memeryBuffer.pop()
-                print("after remove : memory size = " + str(sys.getsizeof(memeryBuffer)))
+                memoryBuffer.pop()
+                print("after remove : memory size = " + str(sys.getsizeof(memoryBuffer))) '''
             if done:
                 rewardFollowingTab[i] = rewardFollowing
                 break
@@ -156,9 +160,8 @@ if __name__ == '__main__':
     print("before env.close")
     env.close()
 
-    #plt.plot([1, 2, 3, 4])
+
     for key in rewardFollowingTab:
-        #print(rewardFollowingTab[key])
         rewardFollowing = rewardFollowingTab[key]
         xval=[]
         yval=[]
