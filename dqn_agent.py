@@ -27,7 +27,7 @@ import tensorflow as tf
 from tensorflow import keras
 from tensorflow.keras import layers
 
-
+import random
 
 class DQNAgent(object):
     """The world's simplest agent!"""
@@ -35,7 +35,6 @@ class DQNAgent(object):
         self.env = env
         self.state_size = 4 #self.env.observation_space
         self.Q_size = self.env.action_space.n
-        self.Q_valeur = {}
         self.memoryBuffer = []
         self.maxSize = 100 * 1000
         self.alpha = 0.1
@@ -44,55 +43,47 @@ class DQNAgent(object):
         self.learning_rate =0.0001
         self.optimizer = tf.optimizers.Adam(learning_rate=self.learning_rate)
         self.batch_size = 1000
-        self.epochs = 14
+        self.epochs = 1
+        self.verbose = 0
         self.model = self.creer_model()
+        self.target_model = self.creer_model()
+        self.target_model.set_weights(self.model.get_weights())
 
     def creer_model(self):
         model = keras.Sequential()
-        model.add(layers.Embedding(self.state_size, self.Q_size, input_length=1))
-        model.add(layers.Reshape((self.Q_size,)))
+        model.add(layers.Flatten(input_shape=(1,))),
         model.add(layers.Dense(64, activation='relu'))
         model.add(layers.Dense(64, activation='relu'))
         model.add(layers.Dense(self.Q_size, activation='linear'))
         model.compile(loss='mse', optimizer=self.optimizer)
+        model.summary()
         return model
 
-    '''def train_model(self,data):
-        X, Y = data
-        history = self.model.fit(X, Y,
-                            epochs = self.epochs,
-                            batch_size = self.batch_size)
-    '''
-    def retrain(self):
-        minibatch = self.get_batch(self.batch_size)
-
+    def train(self):
+        print('retain after each ' +str(self.batch_size)+' episode')
+        minibatch = self.get_batch()
         for state, action, reward, next_state, terminated in minibatch:
 
-            target = self.predict(state)
+            target = self.model.predict(state)
 
             if terminated:
                 target[0][action] = reward
             else:
-                t = self.predict(next_state)
+                t = self.target_model.predict(next_state)
                 target[0][action] = reward + self.gamma * np.amax(t)
 
-            self.model.fit(state, target, epochs=1, verbose=0)
-
-    def predict(self,state):
-        return self.model.predict(state)
-
+            self.model.fit(state, target, epochs=self.epochs, verbose=self.verbose)
 
         
     def get_batch(self):
-        return np.random.sample(self.memoryBuffer, self.batch_size)
+        return random.sample(self.memoryBuffer, self.batch_size)
               
 
     def act(self, observation):
         if np.random.rand() <= self.epsilon:
             return self.env.action_space.sample()
-
-        self.Q_valeur = self.predict(observation)
-        return np.argmax(self.Q_valeur)
+        self.Q_valeur = self.model.predict(observation)
+        return np.argmax(self.Q_valeur[0])
 
 
 if __name__ == '__main__':
@@ -115,14 +106,11 @@ if __name__ == '__main__':
     env.seed(0)
     agent = DQNAgent(env)
 
-    episode_count = 100
+    episode_count = 2000
     reward = 0
     done = False
     sumReward = 0
-    lastObservation = []
     rewardFollowingTab = {}
-    memoryBuffer = []
-
     for i in range(episode_count):
         observation = env.reset()
         rewardFollowing = []
@@ -132,26 +120,23 @@ if __name__ == '__main__':
             next_observation, reward, done, info = env.step(action)
 
             # actionobservation
-            interaction = (observation, action, next_observation, reward, done)
-            memoryBuffer.append(interaction)
+            interaction = (observation, action, reward, next_observation, done)
+            agent.memoryBuffer.append(interaction)
 
             observation = next_observation
 
             #Recuperer la taille de l'action
-            sumReward+=reward
+            sumReward += reward
             rewardFollowing.append(sumReward)
-            if(reward!=1):
-                print("reward = " + str(reward))
 
-
-            print(" memory size = " + str(sys.getsizeof(memoryBuffer)))
-            '''while(sys.getsizeof(memoryBuffer) > maxSize):
-                print("remove last item")
-                memoryBuffer.pop()
-                print("after remove : memory size = " + str(sys.getsizeof(memoryBuffer))) '''
+            if len(agent.memoryBuffer) > agent.maxSize:
+                agent.memoryBuffer.pop()
             if done:
+                agent.target_model.set_weights(agent.model.get_weights())
                 rewardFollowingTab[i] = rewardFollowing
                 break
+            if len(agent.memoryBuffer) % agent.batch_size == 0:
+                agent.train()
             # Note there's no env.render() here. But the environment still can open window and
             # render if asked by env.monitor: it calls env.render('rgb_array') to record video.
             # Video is not recorded every episode, see capped_cubic_video_schedule for details.

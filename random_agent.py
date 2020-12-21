@@ -50,10 +50,7 @@ if __name__ == '__main__':
             ob, reward, done, _ = env.step(action)
             sumReward+=reward
             rewardFollowing.append(sumReward)
-            if(reward!=1):
-                print("reward = " + str(reward))
-            #if(sumReward % 100 == 0):
-            #    print("sumReward = " + str(sumReward))
+
             if done:
                 rewardFollowingTab[i] = rewardFollowing
                 break
