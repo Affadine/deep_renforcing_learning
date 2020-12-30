@@ -41,12 +41,12 @@ class DQNAgent(object):
         self.maxSize = 100000
         self.memoryBuffer = deque(maxlen=self.maxSize)
         self.alpha = 0.1
-        self.gamma = 0.99
+        self.gamma = 0.6
         self.init_epsilon = 1
         self.final_epsilon = 0.1
         self.step_epsilon = 0
         self.epsilon = self.init_epsilon
-        self.learning_rate = 0.01
+        self.learning_rate = 0.0001
         self.optimizer = tf.optimizers.Adam(learning_rate=self.learning_rate)
         self.batch_size = 40
         self.epochs = 1
@@ -145,15 +145,15 @@ if __name__ == '__main__':
     env = gym.make('VizdoomBasic-v0', depth=True, labels=True, position=True, health=True)
     #env.seed(0)
     agent = DQNAgent(env)
-    episode_count = 10000
-    agent.step_epsilon = 2/episode_count
+    episode_count = 1000
+    agent.step_epsilon = 1/episode_count
     reward = 0
     done = False
     sumReward = 0
     rewardFollowingTab = {}
     for i in range(episode_count):
-        if i >= episode_count/2 and agent.epsilon >= agent.final_epsilon:
-            agent.epsilon = agent.init_epsilon - i * agent.step_epsilon
+        #if i >= episode_count/2 and agent.epsilon >= agent.final_epsilon:
+        agent.epsilon = agent.init_epsilon - i * agent.step_epsilon
         observation = agent.preprocess(env.reset()[0])
         rewardFollowing = []
         sumReward = 0
@@ -187,7 +187,7 @@ if __name__ == '__main__':
             # render if asked by env.monitor: it calls env.render('rgb_array') to record video.
             # Video is not recorded every episode, see capped_cubic_video_schedule for details.
             env.render()
-        if i > 0 and i % 1000 == 0:
+        if i > 0 and i % 100 == 0:
             agent.train()
     agent.model.save(MODEL_PATH)
 
