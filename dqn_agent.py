@@ -107,13 +107,13 @@ if __name__ == '__main__':
     # directory, including one with existing data -- all monitor files
     # will be namespaced). You can also dump to a tempdir if you'd
     # like: tempfile.mkdtemp().
-    MODEL_PATH = "model_cartpole1.h5"
+    MODEL_PATH = "model_cartpole.h5"
     outdir = '/tmp/random-agent-results'
     env = wrappers.Monitor(env, directory=outdir, force=True)
     env.seed(0)
     agent = DQNAgent(env)
     agent.model.load_weights(MODEL_PATH)
-    episode_count = 100
+    episode_count = 200
     agent.step_epsilon = 4 / (3 * episode_count)
     done = False
     reward_tab = []

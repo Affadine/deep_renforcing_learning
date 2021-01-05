@@ -44,7 +44,7 @@ class DQNAgent(object):
         self.init_epsilon = 1
         self.final_epsilon = 0.05
         self.step_epsilon = 0
-        self.epsilon = self.init_epsilon
+        self.epsilon = 0.1
         self.learning_rate = 0.01
         self.optimizer = tf.optimizers.Adam(learning_rate=self.learning_rate)
         self.batch_size = 200
@@ -72,18 +72,15 @@ class DQNAgent(object):
         # 2ème couche de convolution
         model.add(
             layers.Conv2D(64, (3, 3), activation='relu'))
-        #model.add(layers.BatchNormalization())
         model.add(layers.MaxPooling2D((4, 4), padding='same'))
 
         # 3ème couche de convolution
         model.add(layers.Conv2D(32, (3, 3), activation='relu'))
-        #model.add(layers.BatchNormalization())
-        #layers.Dropout(0.25)
+
 
         # couche dense de 800 unités
         model.add(layers.Flatten())
-        model.add(layers.Dense(800, activation='relu'))
-        #layers.Dropout(0.5)
+        model.add(layers.Dense(8, activation='relu'))
 
         # Couche de sortie avec les Qvaleurs  à predire pour chaque action
         model.add(layers.Dense(self.Q_size, activation='linear'))
@@ -136,23 +133,18 @@ if __name__ == '__main__':
     # will be namespaced). You can also dump to a tempdir if you'd
     # like: tempfile.mkdtemp().
     outdir = '/tmp/random-agent-results'
-    MODEL_PATH = "model_vizdoomBasic.h5"
+    MODEL_PATH = "model_vizdoomCorridor.h5"
     #VizdoomBasic-v0
     #VizdoomCorridor-v0
-    env = gym.make('VizdoomBasic-v0', depth=True, labels=True, position=True, health=True)
+    env = gym.make('VizdoomCorridor-v0', depth=True, labels=True, position=True, health=True)
     agent = DQNAgent(env)
-    #agent.model.load_weights(MODEL_PATH)
-    episode_count = 300
+    agent.model.load_weights(MODEL_PATH)
+    episode_count = 200
     agent.step_epsilon = 4/(3*episode_count)
     reward = 0
     done = False
     reward_tab = []
     for i in range(episode_count):
-        if i >= episode_count/3 and i < (2*episode_count)/3:
-            agent.epsilon = 0.5
-        elif i >= (2*episode_count)/3:
-            agent.epsilon = 0.1
-
         state = agent.preprocess(env.reset()[0])
         reward = 0
         sumReward = 0
@@ -174,13 +166,12 @@ if __name__ == '__main__':
                 reward_tab.append(sumReward)
                 agent.target_model.set_weights(agent.model.get_weights())
                 break
-            # Note there's no env.render() here. But the environment still can open window and
-            # render if asked by env.monitor: it calls env.render('rgb_array') to record video.
-            # Video is not recorded every episode, see capped_cubic_video_schedule for details.
+
             env.render()
 
-        if len(agent.memoryBuffer) > agent.batch_size and i%5 == 0:
-            agent.train()
+        if len(agent.memoryBuffer) > 0:
+            #agent.train()
+            pass
 
     agent.model.save(MODEL_PATH)
 

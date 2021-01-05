@@ -35,7 +35,6 @@ if __name__ == '__main__':
     agent = RandomAgent(env.action_space)
 
     episode_count = 200
-    reward = 0
     done = False
     sumReward = 0
     reward_tab = []
@@ -43,6 +42,7 @@ if __name__ == '__main__':
     for i in range(episode_count):
         #print("i= " + str(i))
         ob = env.reset()
+        reward = 0
         sumReward = 0
         while True:
             action = agent.act(ob, reward, done)
