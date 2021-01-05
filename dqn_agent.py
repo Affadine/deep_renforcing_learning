@@ -37,12 +37,14 @@ class DQNAgent(object):
         self.Q_size = self.env.action_space.n
         self.memoryBuffer = []
         self.maxSize = 100 * 1000
-        self.alpha = 0.1
-        self.gamma = 0.9
+        self.gamma = 0.6
+        self.init_epsilon = 1
+        self.final_epsilon = 0.05
+        self.step_epsilon = 0
         self.epsilon = 0.1
-        self.learning_rate =0.0001
+        self.learning_rate =0.01
         self.optimizer = tf.optimizers.Adam(learning_rate=self.learning_rate)
-        self.batch_size = 100
+        self.batch_size = 40
         self.epochs = 1
         self.verbose = 0
         self.model = self.creer_model()
@@ -81,8 +83,12 @@ class DQNAgent(object):
 
     def act(self, observation):
         if np.random.rand() <= self.epsilon:
+            print(self.env.action_space.sample())
             return self.env.action_space.sample()
         self.Q_valeur = self.model.predict(observation)
+        print(self.Q_valeur )
+        print(np.argmax(self.Q_valeur[0]))
+        print(np.argmax(self.Q_valeur, axis=1)[0])
         return np.argmax(self.Q_valeur[0])
 
 
@@ -93,7 +99,7 @@ if __name__ == '__main__':
 
     # You can set the level to logger.DEBUG or logger.WARN if you
     # want to change the amount of output.
-    logger.set_level(logger.DEBUG)
+    #logger.set_level(logger.DEBUG)
 
     env = gym.make(args.env_id)
 
@@ -101,63 +107,52 @@ if __name__ == '__main__':
     # directory, including one with existing data -- all monitor files
     # will be namespaced). You can also dump to a tempdir if you'd
     # like: tempfile.mkdtemp().
+    MODEL_PATH = "model_cartpole1.h5"
     outdir = '/tmp/random-agent-results'
     env = wrappers.Monitor(env, directory=outdir, force=True)
     env.seed(0)
     agent = DQNAgent(env)
-
+    agent.model.load_weights(MODEL_PATH)
     episode_count = 100
-    reward = 0
+    agent.step_epsilon = 4 / (3 * episode_count)
     done = False
-    sumReward = 0
-    rewardFollowingTab = {}
+    reward_tab = []
     for i in range(episode_count):
-        observation = env.reset()
-        rewardFollowing = []
+        #if i >= episode_count/4 and agent.epsilon >= agent.final_epsilon:
+        #    agent.epsilon = agent.epsilon - agent.step_epsilon
+        state = env.reset()
+        reward = 0
         sumReward = 0
+        print("Episode        " + str(i))
+        print("Epsilon        " + str(agent.epsilon))
+        print(len(agent.memoryBuffer))
         while True:
-            action = agent.act(observation)
-            next_observation, reward, done, info = env.step(action)
+            action = agent.act(state)
+            next_state, reward, done, info = env.step(action)
 
             # actionobservation
-            interaction = (observation, action, reward, next_observation, done)
+            interaction = (state, action, reward, next_state, done)
             agent.memoryBuffer.append(interaction)
+            state = next_state
 
-            observation = next_observation
-
-            #Recuperer la taille de l'action
+            # Recuperer la taille de l'action
             sumReward += reward
-            rewardFollowing.append(sumReward)
-            print("size memory : " + str(len(agent.memoryBuffer)))
-            if len(agent.memoryBuffer) > agent.maxSize:
-                agent.memoryBuffer.pop()
-
             if done:
+                reward_tab.append(sumReward)
                 agent.target_model.set_weights(agent.model.get_weights())
-                rewardFollowingTab[i] = rewardFollowing
                 break
-            if len(agent.memoryBuffer) % agent.batch_size == 0:
-                agent.train()
-            # Note there's no env.render() here. But the environment still can open window and
-            # render if asked by env.monitor: it calls env.render('rgb_array') to record video.
-            # Video is not recorded every episode, see capped_cubic_video_schedule for details.
 
+        if len(agent.memoryBuffer) > agent.batch_size :
+            pass
+            #agent.train()
+
+    #agent.model.save(MODEL_PATH)
     # Close the env and write monitor result info to disk
     print("before env.close")
     env.close()
 
-
-    for key in rewardFollowingTab:
-        rewardFollowing = rewardFollowingTab[key]
-        xval=[]
-        yval=[]
-        index=1
-        for nextReward in rewardFollowing :
-            xval.append(index)
-            yval.append(nextReward)
-            index=index+1
-        print("Episode : " + str(key))
-        print(rewardFollowing)
-    plt.scatter(xval, yval)
-    plt.ylabel('Learning')
+    x = range(1, episode_count+1)
+    plt.scatter(x, reward_tab)
+    plt.xlabel('episode')
+    plt.ylabel('reward')
     plt.show()

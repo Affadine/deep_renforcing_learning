@@ -34,25 +34,23 @@ if __name__ == '__main__':
     env.seed(0)
     agent = RandomAgent(env.action_space)
 
-    episode_count = 100
+    episode_count = 200
     reward = 0
     done = False
     sumReward = 0
-    rewardFollowingTab = {}
+    reward_tab = []
 
     for i in range(episode_count):
         #print("i= " + str(i))
         ob = env.reset()
-        rewardFollowing = []
         sumReward = 0
         while True:
             action = agent.act(ob, reward, done)
             ob, reward, done, _ = env.step(action)
             sumReward+=reward
-            rewardFollowing.append(sumReward)
 
             if done:
-                rewardFollowingTab[i] = rewardFollowing
+                reward_tab.append(sumReward)
                 break
             # Note there's no env.render() here. But the environment still can open window and
             # render if asked by env.monitor: it calls env.render('rgb_array') to record video.
@@ -62,19 +60,8 @@ if __name__ == '__main__':
     print("before env.close")
     env.close()
 
-    #plt.plot([1, 2, 3, 4])
-    for key in rewardFollowingTab:
-        #print(rewardFollowingTab[key])
-        rewardFollowing = rewardFollowingTab[key]
-        xval=[]
-        yval=[]
-        index=1
-        for nextReward in rewardFollowing :
-            xval.append(index)
-            yval.append(nextReward)
-            index=index+1
-        print("Episode : " + str(key))
-        print(rewardFollowing)
-    plt.scatter(xval, yval)
-    plt.ylabel('Learning')
+    x = range(1, episode_count+1)
+    plt.scatter(x, reward_tab)
+    plt.xlabel('episode')
+    plt.ylabel('reward')
     plt.show()

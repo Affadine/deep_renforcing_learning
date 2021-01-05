@@ -40,15 +40,14 @@ class DQNAgent(object):
         self.Q_size = self.env.action_space.n
         self.maxSize = 100000
         self.memoryBuffer = deque(maxlen=self.maxSize)
-        self.alpha = 0.1
-        self.gamma = 0.6
+        self.gamma = 0.1
         self.init_epsilon = 1
-        self.final_epsilon = 0.1
+        self.final_epsilon = 0.05
         self.step_epsilon = 0
         self.epsilon = self.init_epsilon
-        self.learning_rate = 0.0001
+        self.learning_rate = 0.01
         self.optimizer = tf.optimizers.Adam(learning_rate=self.learning_rate)
-        self.batch_size = 40
+        self.batch_size = 200
         self.epochs = 1
         self.verbose = 0
         self.input_shape = (112, 64, 1)
@@ -66,47 +65,40 @@ class DQNAgent(object):
     def creer_model(self):
         model = keras.Sequential()
         # 1ere couche de convolution
-        model.add(layers.Conv2D(64, (3, 3), activation='relu', input_shape=self.input_shape,
-                                         kernel_regularizer=tf.keras.regularizers.l2(0.001)))
-        model.add(layers.BatchNormalization())
-        model.add(layers.MaxPooling2D((3, 3), strides=(2, 2), padding='same'))
+        model.add(layers.Conv2D(64, (3, 3), activation='relu', input_shape=self.input_shape))
+        #model.add(layers.BatchNormalization())
+        model.add(layers.MaxPooling2D((4, 4), padding='same'))
 
         # 2ème couche de convolution
         model.add(
-            layers.Conv2D(32, (3, 3), activation='relu', kernel_regularizer=tf.keras.regularizers.l2(0.001)))
-        model.add(layers.BatchNormalization())
-        model.add(layers.MaxPooling2D((3, 3), strides=(2, 2), padding='same'))
+            layers.Conv2D(64, (3, 3), activation='relu'))
+        #model.add(layers.BatchNormalization())
+        model.add(layers.MaxPooling2D((4, 4), padding='same'))
 
         # 3ème couche de convolution
-        model.add(layers.Conv2D(32, (2, 2), activation='relu',
-                                         kernel_regularizer=tf.keras.regularizers.l2(0.001)))
-        model.add(layers.BatchNormalization())
-        model.add(layers.MaxPooling2D((2, 2), strides=(2, 2), padding='same'))
+        model.add(layers.Conv2D(32, (3, 3), activation='relu'))
+        #model.add(layers.BatchNormalization())
+        #layers.Dropout(0.25)
 
-        layers.Dropout(0.25)
-        # couche dense de 64 unités
+        # couche dense de 800 unités
         model.add(layers.Flatten())
-        model.add(layers.Dense(64, activation='relu'))
-        layers.Dropout(0.5)
+        model.add(layers.Dense(800, activation='relu'))
+        #layers.Dropout(0.5)
 
         # Couche de sortie avec les Qvaleurs  à predire pour chaque action
-        model.add(layers.Dense(self.Q_size, activation='softmax'))
+        model.add(layers.Dense(self.Q_size, activation='linear'))
 
-        #optimiser = tf.optimizers.Adam(learning_rate=self.learning_rate)
         # compile model
-        model.compile(optimizer=self.optimizer,
-                      loss='mse',
-                      metrics=["accuracy"])
+        model.compile(optimizer=self.optimizer, loss='mse')
         model.summary()
         return model
 
     def train(self):
-        print('retain after each ' + str(self.batch_size) + ' episode')
+        print('retain modele')
         minibatch = self.get_batch()
         for state, action, reward, next_state, terminated in minibatch:
 
             target = self.model.predict(state)
-
             if terminated:
                 target[0][action] = reward
             else:
@@ -121,7 +113,10 @@ class DQNAgent(object):
     def act(self, observation):
         if np.random.rand() <= self.epsilon:
             return self.env.action_space.sample()
+
         self.Q_valeur = self.model.predict(observation)
+        print(self.Q_valeur[0])
+        print(np.argmax(self.Q_valeur[0]))
         return np.argmax(self.Q_valeur[0])
 
 
@@ -141,71 +136,60 @@ if __name__ == '__main__':
     # will be namespaced). You can also dump to a tempdir if you'd
     # like: tempfile.mkdtemp().
     outdir = '/tmp/random-agent-results'
-    MODEL_PATH = "model.h5"
+    MODEL_PATH = "model_vizdoomBasic.h5"
+    #VizdoomBasic-v0
+    #VizdoomCorridor-v0
     env = gym.make('VizdoomBasic-v0', depth=True, labels=True, position=True, health=True)
-    #env.seed(0)
     agent = DQNAgent(env)
-    episode_count = 1000
-    agent.step_epsilon = 1/episode_count
+    #agent.model.load_weights(MODEL_PATH)
+    episode_count = 300
+    agent.step_epsilon = 4/(3*episode_count)
     reward = 0
     done = False
-    sumReward = 0
-    rewardFollowingTab = {}
+    reward_tab = []
     for i in range(episode_count):
-        #if i >= episode_count/2 and agent.epsilon >= agent.final_epsilon:
-        agent.epsilon = agent.init_epsilon - i * agent.step_epsilon
-        observation = agent.preprocess(env.reset()[0])
-        rewardFollowing = []
+        if i >= episode_count/3 and i < (2*episode_count)/3:
+            agent.epsilon = 0.5
+        elif i >= (2*episode_count)/3:
+            agent.epsilon = 0.1
+
+        state = agent.preprocess(env.reset()[0])
+        reward = 0
         sumReward = 0
         print("Episode        " + str(i))
+        print("Epsilon        " + str(agent.epsilon))
+        print(len(agent.memoryBuffer))
         while True:
-            action = agent.act(observation)
+            action = agent.act(state)
+            next_state, reward, done, info = env.step(action)
+            next_state = agent.preprocess(next_state[0])
 
-            next_observation, reward, done, info = env.step(action)
-            #state = preprocess(state[0], [112, 64])
-            next_observation = agent.preprocess(next_observation[0])
-            # actionobservation
-            interaction = (observation, action, reward, next_observation, done)
+            interaction = (state, action, reward, next_state, done)
             agent.memoryBuffer.append(interaction)
-
-            observation = next_observation
+            state = next_state
 
             # Recuperer la taille de l'action
             sumReward += reward
-            rewardFollowing.append(sumReward)
-            #print("size memory : " + str(len(agent.memoryBuffer)))
-            '''if len(agent.memoryBuffer) >= agent.maxSize:
-                agent.memoryBuffer.pop()
-            '''
             if done:
+                reward_tab.append(sumReward)
                 agent.target_model.set_weights(agent.model.get_weights())
-                rewardFollowingTab[i] = rewardFollowing
                 break
-
-
             # Note there's no env.render() here. But the environment still can open window and
             # render if asked by env.monitor: it calls env.render('rgb_array') to record video.
             # Video is not recorded every episode, see capped_cubic_video_schedule for details.
             env.render()
-        if i > 0 and i % 100 == 0:
+
+        if len(agent.memoryBuffer) > agent.batch_size and i%5 == 0:
             agent.train()
+
     agent.model.save(MODEL_PATH)
 
     # Close the env and write monitor result info to disk
     print("before env.close")
     env.close()
 
-    '''for key in rewardFollowingTab:
-        rewardFollowing = rewardFollowingTab[key]
-        xval = []
-        yval = []
-        index = 1
-        for nextReward in rewardFollowing:
-            xval.append(index)
-            yval.append(nextReward)
-            index = index + 1
-        print("Episode : " + str(key))
-        print(rewardFollowing)
-    plt.scatter(xval, yval)
-    plt.ylabel('Learning')
-    plt.show()'''
+    x = range(1, episode_count+1)
+    plt.scatter(x, reward_tab)
+    plt.xlabel('episode')
+    plt.ylabel('reward')
+    plt.show()
